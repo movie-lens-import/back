@@ -1,0 +1,4 @@
+# pyython
+__pycache__/
+*.pyc
+.venv
