@@ -29,6 +29,7 @@ def update_task_status(job_id, status, name=None, table_name=None, result=None, 
 
 
 def import_csv_with_copy(file_path, file_name, table_name):
+    print(f"Importing {file_name} to {table_name} table...")
     job_id = os.getenv('RQ_JOB_ID')
     update_task_status(job_id, status='started', name=file_name, table_name=table_name)
 
@@ -62,6 +63,37 @@ def import_csv_with_copy(file_path, file_name, table_name):
                     timestamp BIGINT
                 );
             """)
+        elif table_name == 'movies':
+            cursor.execute(f"""
+                CREATE TABLE {temp_table_name} (
+                    movieId INT PRIMARY KEY,
+                    title TEXT,
+                    genres TEXT
+                );
+            """)
+        elif table_name == 'links':
+            cursor.execute(f"""
+                CREATE TABLE {temp_table_name} (
+                    movieId INT PRIMARY KEY,
+                    imdbId INT,
+                    tmdbId INT
+                );
+            """)
+        elif table_name == 'genomescores':
+            cursor.execute(f"""
+                CREATE TABLE {temp_table_name} (
+                    movieId INT,
+                    tagId INT,
+                    relevance FLOAT
+                );
+            """)
+        elif table_name == 'genometags':
+            cursor.execute(f"""
+                CREATE TABLE {temp_table_name} (
+                    tagId INT PRIMARY KEY,
+                    tag TEXT
+                );
+            """)
 
         with open(file_path, 'r') as f:
             cursor.copy_expert(f"COPY {temp_table_name} FROM stdin WITH CSV HEADER", f)
@@ -69,17 +101,12 @@ def import_csv_with_copy(file_path, file_name, table_name):
         cursor.execute(f'SELECT COUNT(*) FROM {temp_table_name};')
         rows_inserted = cursor.fetchone()[0]
 
-        if table_name == 'ratings':
+        if table_name in ['ratings', 'tags']:
             cursor.execute(f"""
                 ALTER TABLE {temp_table_name} 
                 ALTER COLUMN timestamp TYPE TIMESTAMP USING to_timestamp(timestamp);
             """)
-        elif table_name == 'tags':
-            cursor.execute(f"""
-                ALTER TABLE {temp_table_name} 
-                ALTER COLUMN timestamp TYPE TIMESTAMP USING to_timestamp(timestamp);
-            """)
-
+            
         cursor.execute(f'DROP TABLE IF EXISTS {table_name};')
         cursor.execute(f'ALTER TABLE {temp_table_name} RENAME TO {table_name};')
 
