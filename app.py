@@ -89,6 +89,50 @@ def get_task(job_id):
     return jsonify({
         'task': task_dict
     })
+    
+@app.route("/movies", methods=['GET'])
+def list_movies():
+    limit = request.args.get('limit', 10, type=int)
+    offset = request.args.get('offset', 0, type=int)
+    
+    conn = psycopg2.connect("dbname=movielens user=postgres password=postgres host=localhost port=5432")
+    cursor = conn.cursor()
+    
+    # Get total count of movies
+    cursor.execute("SELECT COUNT(*) FROM mv_movie_ratings;")
+    total_count = cursor.fetchone()[0]
+    
+    # Fetch paginated results
+    cursor.execute(f"""
+                    SELECT *
+                    FROM mv_movie_ratings
+                    ORDER BY movieid
+                    LIMIT {limit} 
+                    OFFSET {offset};
+                   """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    movies = []
+    for row in rows:
+        movie = {
+            'movieid': row[0],
+            'title': row[1],
+            'genres': row[2],
+            'average_rating': row[3],
+            'ratings_count': row[4]
+        }
+        movies.append(movie)
+
+    next_offset = offset + limit
+    previous_offset = max(0, offset - limit)
+    
+    return jsonify({
+        'count': total_count,  # Return the total count of movies
+        'next': f'/movies?limit={limit}&offset={next_offset}' if next_offset < total_count else None,
+        'previous': f'/movies?limit={limit}&offset={previous_offset}' if offset > 0 else None,
+        'results': movies
+    })
 
 @app.route("/tasks", methods=['GET'])
 def list_tasks():
