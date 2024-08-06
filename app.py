@@ -120,7 +120,9 @@ def list_movies():
             'title': row[1],
             'genres': row[2],
             'average_rating': row[3],
-            'ratings_count': row[4]
+            'ratings_count': row[4],
+            'imdbid': row[5],
+            'tmdbid': row[6]
         }
         movies.append(movie)
 
